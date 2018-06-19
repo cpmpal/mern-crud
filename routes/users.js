@@ -18,19 +18,31 @@ const postLimiter = new RateLimit({
 });
 
 // READ (ONE)
-router.get('/:id', (req, res) => {
-  User.findById(req.params.id)
+router.get('/username/:username/password/:password', (req, res) => {
+  User.findOne({username: req.params.username,
+             password: req.params.password}, 'name email username')
     .then((result) => {
-      res.json(result);
+       res.json(result);
     })
     .catch((err) => {
       res.status(404).json({ success: false, msg: `No such user.` });
     });
 });
 
+// get users for 
+router.get('/:id', (req, res) => {
+  User.find({_id : req.params.id}, '-password')
+    .then((result) => {
+      res.json(result);
+    })
+    .catch((err) => {
+      res.status(404).json({ sucess: false, msg: 'No such user.' });
+    })
+})
+
 // READ (ALL)
 router.get('/', (req, res) => {
-  User.find({})
+  User.find({}, 'name email username')
     .then((result) => {
       res.json(result);
     })
@@ -42,17 +54,13 @@ router.get('/', (req, res) => {
 // CREATE
 router.post('/', postLimiter, (req, res) => {
 
-  // Validate the age
-  let age = sanitizeAge(req.body.age);
-  if (age < 5 && age != '') return res.status(403).json({ success: false, msg: `You're too young for this.` });
-  else if (age > 130 && age != '') return res.status(403).json({ success: false, msg: `You're too old for this.` });
-
   let newUser = new User({
     name: sanitizeName(req.body.name),
     email: sanitizeEmail(req.body.email),
-    age: sanitizeAge(req.body.age),
-    gender: sanitizeGender(req.body.gender)
+    username: sanitizeUserName(req.body.username),
+    password: req.body.password
   });
+
 
   newUser.save()
     .then((result) => {
@@ -63,8 +71,7 @@ router.post('/', postLimiter, (req, res) => {
           _id: result._id,
           name: result.name,
           email: result.email,
-          age: result.age,
-          gender: result.gender
+          username: result.username,
         }
       });
     })
@@ -72,18 +79,22 @@ router.post('/', postLimiter, (req, res) => {
       if (err.errors) {
         if (err.errors.name) {
           res.status(400).json({ success: false, msg: err.errors.name.message });
+          console.log('name');
           return;
         }
         if (err.errors.email) {
           res.status(400).json({ success: false, msg: err.errors.email.message });
+          console.log('email');
           return;
         }
-        if (err.errors.age) {
-          res.status(400).json({ success: false, msg: err.errors.age.message });
+        if (err.errors.username) {
+          res.status(400).json({ success: false, msg: err.errors.username.message });
+          console.log('username');
           return;
         }
-        if (err.errors.gender) {
-          res.status(400).json({ success: false, msg: err.errors.gender.message });
+        if (err.errors.password) {
+          res.status(400).json({ success: false, msg: err.errors.password.message });
+          console.log('password');
           return;
         }
         // Show failed if all else fails for some reasons
@@ -103,8 +114,8 @@ router.put('/:id', (req, res) => {
   let updatedUser = {
     name: sanitizeName(req.body.name),
     email: sanitizeEmail(req.body.email),
-    age: sanitizeAge(req.body.age),
-    gender: sanitizeGender(req.body.gender)
+    username: sanitizeUserName(req.body.username),
+    password: req.body.password
   };
 
   User.findOneAndUpdate({ _id: req.params.id }, updatedUser, { runValidators: true, context: 'query' })
@@ -118,8 +129,7 @@ router.put('/:id', (req, res) => {
               _id: newResult._id,
               name: newResult.name,
               email: newResult.email,
-              age: newResult.age,
-              gender: newResult.gender
+              username: newResult.username,
             }
           });
         })
@@ -164,8 +174,7 @@ router.delete('/:id', (req, res) => {
           _id: result._id,
           name: result.name,
           email: result.email,
-          age: result.age,
-          gender: result.gender
+          username: result.username
         }
       });
     })
@@ -183,12 +192,8 @@ sanitizeName = (name) => {
 sanitizeEmail = (email) => {
   return email.toLowerCase();
 }
-sanitizeAge = (age) => {
-  // Return empty if age is non-numeric
-  if (isNaN(age) && age != '') return '';
-  return (age === '') ? age : parseInt(age);
+// strip whitespace from username
+sanitizeUserName = (username) => {
+  return username.toLowerCase().replace(/\s+/g, '');
 }
-sanitizeGender = (gender) => {
-  // Return empty if it's neither of the two
-  return (gender === 'm' || gender === 'f') ? gender : '';
-}
+

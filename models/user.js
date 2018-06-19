@@ -22,13 +22,13 @@ const emailValidator = [
   })
 ];
 
-const ageValidator = [
-  // TODO: Make some validations here...
-];
+const passwordValidator = [{
+  validator: (val) => {
+    return /^\w+$/.test(val)
+  },
+  message: 'Not a valid password. Only alphanumeric because we have no security ¯\_(ツ)_/¯'
 
-const genderValidator = [
-  // TODO: Make some validations here...
-];
+  }];
 
 // Define the database model
 const UserSchema = new mongoose.Schema({
@@ -43,13 +43,13 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     validate: emailValidator
   },
-  age: {
-    type: Number,
-    validate: ageValidator
-  },
-  gender: {
+  username: {
     type: String,
-    validate: genderValidator
+    unique: true,
+  },
+  password: {
+    type: String,
+    validate: passwordValidator
   }
 });
 
